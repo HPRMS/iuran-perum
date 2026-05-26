@@ -186,6 +186,18 @@
   <div id="rekap-content"></div>
 </section>
 <section id="tab-backup" class="tab-section">
+  <p class="section-label">Saldo Pembuka</p>
+  <div class="form-card" style="margin-bottom:12px">
+    <div class="form-group">
+      <label>Saldo akhir bulan sebelum aplikasi dipakai (Rp)</label>
+      <input type="number" id="saldo-awal" placeholder="0" 
+        oninput="saveSaldoAwal()" 
+        style="background:var(--bg3);border:1px solid #475569;border-radius:var(--rs);color:var(--text);padding:10px 12px;font-size:14px;outline:none;width:100%">
+    </div>
+    <div style="font-size:12px;color:var(--text2)">
+      Contoh: isi saldo kas per 31 Desember 2025. Cukup diisi sekali.
+    </div>
+  </div>
   <div style="background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.2);border-radius:var(--rs);padding:14px;margin-bottom:1.25rem;font-size:13px;color:var(--text2);line-height:1.6">
     📄 Data tersimpan di <strong style="color:var(--text)">localStorage + IndexedDB</strong>. Tidak hilang meski clear cache.
   </div>
@@ -453,14 +465,16 @@ function hapusKeluar(id){
 
 // ── Rekap ─────────────────────────────────────────────────────────────────
 function renderRekap(){
-  const bulan=getBulan();
-  const bayarBulan=data.bayar[bulan]||{};
-  const wargaList=Object.entries(data.warga);
-  const sudahBayar=wargaList.filter(([id])=>bayarBulan[id]);
-  const belumBayar=wargaList.filter(([id])=>!bayarBulan[id]);
-  const terkumpul=sudahBayar.reduce((s,[,w])=>s+(w.iuran||0),0);
-  const targetBulan=wargaList.reduce((s,[,w])=>s+(w.iuran||0),0);
-  const keluarBulan=Object.values(data.keluar).filter(k=>k.date&&k.date.slice(0,7)===bulan).reduce((s,k)=>s+(k.amt||0),0);
+  const bulan = getBulan();
+  const bayarBulan = data.bayar[bulan] || {};
+  const wargaList  = Object.entries(data.warga);
+  const sudahBayar = wargaList.filter(([id]) => bayarBulan[id]);
+  const belumBayar = wargaList.filter(([id]) => !bayarBulan[id]);
+  const terkumpul  = sudahBayar.reduce((s, [, w]) => s + (w.iuran || 0), 0);
+  const targetBulan= wargaList.reduce((s, [, w]) => s + (w.iuran || 0), 0);
+  const keluarBulan= Object.values(data.keluar).filter(k => k.date && k.date.slice(0, 7) === bulan).reduce((s, k) => s + (k.amt || 0), 0);
+
+  const saldoBulanLalu = hitungSaldoSebelum(bulan);
 
   const catMap={};
   Object.values(data.keluar).filter(k=>k.date&&k.date.slice(0,7)===bulan).forEach(k=>{catMap[k.cat]=(catMap[k.cat]||0)+k.amt;});
@@ -474,6 +488,7 @@ function renderRekap(){
       <div class="rekap-row"><span style="color:var(--inc)">✓ Sudah bayar</span><span style="color:var(--inc)">${sudahBayar.length} orang</span></div>
       <div class="rekap-row"><span style="color:var(--exp)">✗ Belum bayar</span><span style="color:var(--exp)">${belumBayar.length} orang</span></div>
       <div class="rekap-row"><span>Target</span><span>${fmt(targetBulan)}</span></div>
+      <div class="rekap-row"><span style="color:var(--text2)">Saldo bulan lalu</span><span style="color:var(--warn)">${fmt(saldoBulanLalu)}</span></div>
       <div class="rekap-row"><span>Terkumpul</span><span style="color:var(--inc)">${fmt(terkumpul)}</span></div>
       <div class="rekap-row"><span>Pengeluaran</span><span style="color:var(--exp)">-${fmt(keluarBulan)}</span></div>
       <div class="rekap-row"><span>Saldo bulan ini</span><span style="color:var(--sav)">${fmt(terkumpul-keluarBulan)}</span></div>
@@ -536,6 +551,88 @@ function handleImport(e){
   };
   r.readAsText(file); e.target.value='';
 }*/
+
+
+function hitungSaldoSebelum(bulan) {
+  // Mulai dari saldo awal
+  let saldo = data.saldoAwal || 0;
+
+  // Ambil semua bulan yang ada di data, filter hanya sebelum bulan ini
+  const semuaBulan = [
+    ...new Set([
+      ...Object.keys(data.bayar),
+      ...Object.values(data.keluar).map(k => k.date?.slice(0, 7)).filter(Boolean)
+    ])
+  ].filter(ym => ym < bulan).sort();
+
+  semuaBulan.forEach(ym => {
+    // Tambah pemasukan iuran bulan ym
+    const bayarBulanIni = data.bayar[ym] || {};
+    Object.entries(data.warga).forEach(([id, w]) => {
+      if (bayarBulanIni[id]) saldo += (w.iuran || 0);
+    });
+
+    // Kurangi pengeluaran bulan ym
+    Object.values(data.keluar)
+      .filter(k => k.date?.slice(0, 7) === ym)
+      .forEach(k => saldo -= (k.amt || 0));
+  });
+
+  return saldo;
+}
+
+// ── Saldo Awal ────────────────────────────────────────────────────────────
+function saveSaldoAwal() {
+  const val = parseFloat(document.getElementById('saldo-awal').value) || 0;
+  data.saldoAwal = val;
+  saveData();
+  updateMetrics();
+}
+
+function loadSaldoAwal() {
+  const el = document.getElementById('saldo-awal');
+  if (el) el.value = data.saldoAwal || 0;
+}
+
+function updateMetrics() {
+  let totalKas = data.saldoAwal || 0; // ← tambah saldo awal di sini
+  let totalKeluar = 0;
+
+  Object.entries(data.warga).forEach(([id, w]) => {
+    Object.keys(data.bayar).forEach(ym => {
+      if (data.bayar[ym]?.[id]) totalKas += (w.iuran || 0);
+    });
+  });
+
+  Object.values(data.keluar).forEach(k => totalKeluar += (k.amt || 0));
+
+  const saldo = totalKas - totalKeluar;
+  document.getElementById('m-kas').textContent  = fmt(totalKas);
+  document.getElementById('m-exp').textContent  = fmt(totalKeluar);
+  const el = document.getElementById('m-saldo');
+  el.textContent  = (saldo < 0 ? '-' : '') + fmt(saldo);
+  el.style.color  = saldo >= 0 ? 'var(--sav)' : 'var(--exp)';
+}
+
+function loadData() {
+  const ls = localStorage.getItem(KEY);
+  if (ls) {
+    data = JSON.parse(ls);
+    saveToIDB(data);
+    loadSaldoAwal(); // ← tambah ini
+    renderAll();
+  } else {
+    loadFromIDB().then(d => {
+      if (d) {
+        data = d;
+        localStorage.setItem(KEY, JSON.stringify(d));
+        toast('Data dipulihkan!');
+      }
+      loadSaldoAwal(); // ← dan ini
+      renderAll();
+    });
+  }
+}
 
 // ── Export ────────────────────────────────────────────────────────────────
 async function exportData() {
@@ -721,6 +818,6 @@ document.querySelectorAll('.modal-overlay').forEach(el=>{
 
 loadData();
 </script>
-<script src="js/saldo-berjalan-patch.js"></script>
+<!--script src="js/saldo-berjalan-patch.js"></script-->
 </body>
 </html>
