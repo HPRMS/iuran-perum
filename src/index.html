@@ -464,68 +464,119 @@ function hapusKeluar(id){
 }
 
 // ── Rekap ─────────────────────────────────────────────────────────────────
-function renderRekap(){
-  const bulan = getBulan();
+function renderRekap() {
+  const bulan      = getBulan();
   const bayarBulan = data.bayar[bulan] || {};
   const wargaList  = Object.entries(data.warga);
   const sudahBayar = wargaList.filter(([id]) => bayarBulan[id]);
   const belumBayar = wargaList.filter(([id]) => !bayarBulan[id]);
   const terkumpul  = sudahBayar.reduce((s, [, w]) => s + (w.iuran || 0), 0);
   const targetBulan= wargaList.reduce((s, [, w]) => s + (w.iuran || 0), 0);
-  const keluarBulan= Object.values(data.keluar).filter(k => k.date && k.date.slice(0, 7) === bulan).reduce((s, k) => s + (k.amt || 0), 0);
+  const keluarBulan= Object.values(data.keluar)
+    .filter(k => k.date && k.date.slice(0, 7) === bulan)
+    .reduce((s, k) => s + (k.amt || 0), 0);
 
   const saldoBulanLalu = hitungSaldoSebelum(bulan);
+  const saldoAkhir     = saldoBulanLalu + terkumpul - keluarBulan;
 
-  const catMap={};
-  Object.values(data.keluar).filter(k=>k.date&&k.date.slice(0,7)===bulan).forEach(k=>{catMap[k.cat]=(catMap[k.cat]||0)+k.amt;});
-  const catList=Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
-  const maxCat=catList[0]?.[1]||1;
+  // ── Group terkumpul per blok ─────────────────────────────────────────
+  // Ambil semua blok unik (ambil huruf pertama, misal A dari A1, A2)
+  const blokMap = {};
+  sudahBayar.forEach(([id, w]) => {
+    // Ambil nama blok: huruf di depan sebelum angka, misal "A" dari "A1"
+    const blok = w.blok.replace(/[^a-zA-Z]/g, '').toUpperCase() || w.blok;
+    if (!blokMap[blok]) blokMap[blok] = { jumlah: 0, nominal: 0 };
+    blokMap[blok].jumlah++;
+    blokMap[blok].nominal += (w.iuran || 0);
+  });
 
-  document.getElementById('rekap-content').innerHTML=`
+  const blokRows = Object.entries(blokMap)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([blok, v]) => `
+      <div class="rekap-row" style="padding-left:12px">
+        <span style="color:var(--text2)">└ Blok ${blok} (${v.jumlah} warga)</span>
+        <span style="color:var(--inc)">${fmt(v.nominal)}</span>
+      </div>`).join('');
+
+  // ── Kategori pengeluaran ─────────────────────────────────────────────
+  const catMap = {};
+  Object.values(data.keluar)
+    .filter(k => k.date && k.date.slice(0, 7) === bulan)
+    .forEach(k => { catMap[k.cat] = (catMap[k.cat] || 0) + k.amt; });
+  const catList = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+  const maxCat  = catList[0]?.[1] || 1;
+
+  document.getElementById('rekap-content').innerHTML = `
     <div class="rekap-card">
       <div class="rekap-title">📊 Iuran — ${bulanLabelPj(bulan)}</div>
       <div class="rekap-row"><span>Total warga</span><span>${wargaList.length} orang</span></div>
       <div class="rekap-row"><span style="color:var(--inc)">✓ Sudah bayar</span><span style="color:var(--inc)">${sudahBayar.length} orang</span></div>
       <div class="rekap-row"><span style="color:var(--exp)">✗ Belum bayar</span><span style="color:var(--exp)">${belumBayar.length} orang</span></div>
-      <div class="rekap-row"><span>Target</span><span>${fmt(targetBulan)}</span></div>
-      <div class="rekap-row"><span style="color:var(--text2)">Saldo bulan lalu</span><span style="color:var(--warn)">${fmt(saldoBulanLalu)}</span></div>
-      <div class="rekap-row"><span>Terkumpul</span><span style="color:var(--inc)">${fmt(terkumpul)}</span></div>
-      <div class="rekap-row"><span>Pengeluaran</span><span style="color:var(--exp)">-${fmt(keluarBulan)}</span></div>
-      <div class="rekap-row"><span>Saldo bulan ini</span><span style="color:var(--sav)">${fmt(terkumpul-keluarBulan)}</span></div>
+      <!--div class="rekap-row"><span>Target bulan ini</span><span>${fmt(targetBulan)}</span></div-->
+      <div class="rekap-row">
+        <span style="color:var(--text2)">Saldo bulan lalu</span>
+        <span style="color:var(--warn)">${fmt(saldoBulanLalu)}</span>
+      </div>
     </div>
 
     <div class="rekap-card">
+      <div class="rekap-title">💰 Terkumpul bulan ini — ${fmt(terkumpul)}</div>
+      ${blokRows || '<div style="font-size:13px;color:var(--text2);padding:4px 0">Belum ada yang bayar.</div>'}
+    </div>
+
+    <div class="rekap-card">
+      <div class="rekap-title">🧾 Ringkasan</div>
+      <div class="rekap-row">
+        <span>Saldo bulan lalu</span>
+        <span style="color:var(--warn)">${fmt(saldoBulanLalu)}</span>
+      </div>
+      <div class="rekap-row">
+        <span>+ Terkumpul bulan ini</span>
+        <span style="color:var(--inc)">+${fmt(terkumpul)}</span>
+      </div>
+      <div class="rekap-row">
+        <span>- Pengeluaran</span>
+        <span style="color:var(--exp)">-${fmt(keluarBulan)}</span>
+      </div>
+      <div class="rekap-row">
+        <span><b>Saldo akhir bulan ini</b></span>
+        <span style="color:${saldoAkhir >= 0 ? 'var(--sav)' : 'var(--exp)'}"><b>${fmt(saldoAkhir)}</b></span>
+      </div>
+    </div>
+
+    ${catList.length ? `
+    <div class="rekap-card">
+      <div class="rekap-title">💸 Pengeluaran per kategori</div>
+      ${catList.map(([cat, amt], i) => `
+        <div class="bar-wrap">
+          <div class="bar-meta"><span>${CATICON[cat] || '📌'} ${cat}</span><span>${fmt(amt)}</span></div>
+          <div class="bar-bg"><div class="bar-fill" style="width:${Math.round(amt / maxCat * 100)}%;background:${COLORS[i % COLORS.length]}"></div></div>
+        </div>`).join('')}
+    </div>` : ''}
+
+    <div class="rekap-card">
       <div class="rekap-title">✅ Sudah bayar</div>
-      ${sudahBayar.length ? sudahBayar.map(([id,w])=>{
-        const rec=bayarBulan[id];
+      ${sudahBayar.length ? sudahBayar.map(([id, w]) => {
+        const rec = bayarBulan[id];
         return `<div class="rekap-row">
           <div>
             <div>${w.blok} · ${w.nama}</div>
-            <div class="rekap-tgl">📅 ${fmtTgl(rec.tgl)}${rec.catatan?' · '+rec.catatan:''}</div>
+            <div class="rekap-tgl">📅 ${fmtTgl(rec.tgl)}${rec.catatan ? ' · ' + rec.catatan : ''}</div>
           </div>
-          <span style="color:var(--inc)">${fmt(w.iuran||0)}</span>
+          <span style="color:var(--inc)">${fmt(w.iuran || 0)}</span>
         </div>`;
       }).join('') : '<div style="font-size:13px;color:var(--text2);padding:6px 0">Belum ada yang bayar.</div>'}
     </div>
 
     <div class="rekap-card">
       <div class="rekap-title">⏳ Belum bayar</div>
-      ${belumBayar.length ? belumBayar.map(([,w])=>`
+      ${belumBayar.length ? belumBayar.map(([, w]) => `
         <div class="rekap-row">
           <span>${w.blok} · ${w.nama}</span>
-          <span style="color:var(--exp)">${fmt(w.iuran||0)}</span>
+          <span style="color:var(--exp)">${fmt(w.iuran || 0)}</span>
         </div>`).join('')
         : '<div style="font-size:13px;color:var(--inc);padding:6px 0">Semua warga sudah lunas! 🎉</div>'}
-    </div>
-
-    ${catList.length?`<div class="rekap-card">
-      <div class="rekap-title">💸 Pengeluaran per kategori</div>
-      ${catList.map(([cat,amt],i)=>`
-        <div class="bar-wrap">
-          <div class="bar-meta"><span>${CATICON[cat]||'📌'} ${cat}</span><span>${fmt(amt)}</span></div>
-          <div class="bar-bg"><div class="bar-fill" style="width:${Math.round(amt/maxCat*100)}%;background:${COLORS[i%COLORS.length]}"></div></div>
-        </div>`).join('')}
-    </div>`:''}`;
+    </div>`;
 }
 
 // ── Backup ────────────────────────────────────────────────────────────────
