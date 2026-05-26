@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iuran Perumahan</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0f172a;--bg2:#1e293b;--bg3:#334155;
+      --text:#f1f5f9;--text2:#94a3b8;
+      --inc:#34d399;--exp:#f87171;--sav:#60a5fa;--warn:#fbbf24;
+      --r:12px;--rs:8px;
+    }
+    body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;max-width:520px;margin:0 auto;padding-bottom:80px}
+    .header{background:linear-gradient(135deg,#1e3a5f,#0f172a);padding:1.25rem;border-bottom:1px solid var(--bg2)}
+    .header-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+    .header-title{font-size:20px;font-weight:700}
+    .header-sub{font-size:12px;color:var(--text2);margin-top:2px}
+    .metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .metric-card{background:rgba(255,255,255,0.05);border-radius:var(--rs);padding:10px 12px}
+    .metric-label{font-size:10px;color:var(--text2);margin-bottom:3px}
+    .metric-val{font-size:13px;font-weight:600}
+    .tab-nav{display:flex;background:var(--bg2);padding:8px;gap:6px;border-bottom:1px solid var(--bg3);position:sticky;top:0;z-index:10}
+    .tab-btn{flex:1;padding:7px 4px;background:none;border:1px solid transparent;border-radius:var(--rs);color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;transition:all .2s}
+    .tab-btn.active{background:var(--bg3);border-color:#475569;color:var(--text)}
+    .tab-section{display:none;padding:1rem}
+    .tab-section.active{display:block}
+    .section-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+    .month-bar{padding:8px 1rem;background:var(--bg2);border-bottom:1px solid var(--bg3)}
+    .month-bar select{width:100%;background:var(--bg3);color:var(--text);border:1px solid #475569;border-radius:var(--rs);padding:7px 10px;font-size:13px;outline:none}
+    .form-card{background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r);padding:1.25rem;margin-bottom:12px}
+    .form-group{margin-bottom:12px}
+    .form-group label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px}
+    .form-group input,.form-group select{width:100%;background:var(--bg3);border:1px solid #475569;border-radius:var(--rs);color:var(--text);padding:10px 12px;font-size:14px;outline:none;transition:border-color .2s}
+    .form-group input:focus,.form-group select:focus{border-color:var(--sav)}
+    .form-group input::placeholder{color:#475569}
+    .form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .btn-primary{width:100%;padding:11px;background:var(--sav);border:none;border-radius:var(--rs);color:#0f172a;font-size:14px;font-weight:700;cursor:pointer}
+    .btn-secondary{width:100%;padding:10px;background:none;border:1px solid var(--bg3);border-radius:var(--rs);color:var(--text2);font-size:13px;cursor:pointer;margin-top:8px}
+    .btn-danger{width:100%;padding:10px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:var(--rs);color:var(--exp);font-size:13px;cursor:pointer;margin-top:8px}
+    /* Warga */
+    .warga-item{display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--rs);padding:12px;margin-bottom:8px}
+    .warga-blok{width:38px;height:38px;background:var(--bg3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+    .warga-info{flex:1;min-width:0}
+    .warga-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .warga-sub{font-size:11px;color:var(--text2);margin-top:1px}
+    .tgl-bayar{font-size:11px;margin-top:3px;font-weight:500}
+    .chip{font-size:11px;padding:3px 9px;border-radius:12px;font-weight:600;flex-shrink:0;cursor:pointer;border:none}
+    .chip-lunas{background:rgba(52,211,153,0.15);color:var(--inc)}
+    .chip-belum{background:rgba(248,113,113,0.12);color:var(--exp)}
+    .btn-icon{background:none;border:none;color:var(--text2);cursor:pointer;font-size:15px;padding:4px;flex-shrink:0}
+    /* Pengeluaran */
+    .tx-item{display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--rs);padding:12px;margin-bottom:8px}
+    .tx-icon{width:36px;height:36px;border-radius:50%;background:rgba(248,113,113,0.12);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+    .tx-info{flex:1;min-width:0}
+    .tx-name{font-size:13px;font-weight:500}
+    .tx-sub{font-size:11px;color:var(--text2);margin-top:1px}
+    .tx-amt{font-size:14px;font-weight:600;color:var(--exp);flex-shrink:0}
+    /* Rekap */
+    .rekap-card{background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r);padding:1rem;margin-bottom:10px}
+    .rekap-title{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:10px}
+    .rekap-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:6px 0;border-bottom:1px solid var(--bg3)}
+    .rekap-row:last-child{border:none;font-weight:600;font-size:14px;padding-top:10px}
+    .rekap-tgl{font-size:11px;color:var(--text2);margin-top:1px}
+    .bar-wrap{margin-bottom:10px}
+    .bar-meta{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+    .bar-bg{background:var(--bg3);border-radius:3px;height:6px;overflow:hidden}
+    .bar-fill{height:100%;border-radius:3px;transition:width .5s}
+    /* Backup */
+    .backup-card{display:flex;align-items:center;gap:14px;background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--rs);padding:14px;margin-bottom:10px;cursor:pointer;transition:background .2s}
+    .backup-card:active{background:var(--bg3)}
+    .backup-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+    .backup-text strong{display:block;font-size:14px;color:var(--text);margin-bottom:2px}
+    .backup-text span{font-size:12px;color:var(--text2)}
+    .tip-item{font-size:13px;color:var(--text2);background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--rs);padding:10px 14px;margin-bottom:6px}
+    /* Modal */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center;z-index:200}
+    .modal-overlay.show{display:flex}
+    .modal{background:var(--bg2);border-radius:var(--r) var(--r) 0 0;padding:1.25rem;width:100%;max-width:520px;max-height:88vh;overflow-y:auto}
+    .modal-title{font-size:16px;font-weight:700;margin-bottom:.25rem}
+    .modal-sub{font-size:13px;color:var(--text2);margin-bottom:1rem}
+    /* FAB */
+    .fab{position:fixed;bottom:24px;right:20px;width:52px;height:52px;background:var(--sav);border:none;border-radius:50%;color:#0f172a;font-size:26px;cursor:pointer;box-shadow:0 4px 16px rgba(96,165,250,.35);z-index:50;display:none;align-items:center;justify-content:center}
+    .fab.show{display:flex}
+    /* Toast */
+    .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--bg2);color:var(--text);border:1px solid var(--bg3);border-radius:20px;padding:9px 18px;font-size:13px;opacity:0;transition:all .3s;z-index:999;pointer-events:none;white-space:nowrap}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .empty{text-align:center;color:var(--text2);font-size:13px;padding:2.5rem 0}
+    .empty span{display:block;font-size:36px;margin-bottom:8px}
+  </style>
+  
+</head>
+<body>
+
+<!-- Modal Tandai Bayar -->
+<div class="modal-overlay" id="modal-bayar">
+  <div class="modal">
+    <div class="modal-title" id="mb-title">Tandai Lunas</div>
+    <div class="modal-sub" id="mb-sub"></div>
+    <div class="form-group">
+      <label>Tanggal Bayar</label>
+      <input type="date" id="b-tanggal">
+    </div>
+    <div class="form-group">
+      <label>Catatan (opsional)</label>
+      <input type="text" id="b-catatan" placeholder="Contoh: Transfer BCA, Tunai, dll">
+    </div>
+    <button class="btn-primary" onclick="konfirmasiLunas()">✓ Tandai Lunas</button>
+    <button class="btn-secondary" onclick="closeModal('modal-bayar')">Batal</button>
+  </div>
+</div>
+
+<!-- Modal Warga -->
+<div class="modal-overlay" id="modal-warga">
+  <div class="modal">
+    <div class="modal-title" id="mw-title">Tambah Warga</div>
+    <div class="modal-sub" style="display:none"></div>
+    <div class="form-group"><label>Nama Lengkap</label><input type="text" id="w-nama" placeholder="Budi Santoso"></div>
+    <div class="form-row-2">
+      <div class="form-group"><label>Blok / No. Rumah</label><input type="text" id="w-blok" placeholder="A1"></div>
+      <div class="form-group"><label>No. HP (opsional)</label><input type="text" id="w-hp" placeholder="08xx"></div>
+    </div>
+    <div class="form-group"><label>Iuran per bulan (Rp)</label><input type="number" id="w-iuran" placeholder="20000"></div>
+    <button class="btn-primary" onclick="simpanWarga()">Simpan</button>
+    <button class="btn-danger" id="btn-hapus-warga" onclick="hapusWarga()" style="display:none">Hapus Warga</button>
+    <button class="btn-secondary" onclick="closeModal('modal-warga')">Batal</button>
+  </div>
+</div>
+
+<!-- Modal Pengeluaran -->
+<div class="modal-overlay" id="modal-keluar">
+  <div class="modal">
+    <div class="modal-title">Catat Pengeluaran</div>
+    <div class="modal-sub" style="display:none"></div>
+    <div class="form-group"><label>Keterangan</label><input type="text" id="k-desc" placeholder="Bayar tukang kebun..."></div>
+    <div class="form-row-2">
+      <div class="form-group"><label>Jumlah (Rp)</label><input type="number" id="k-amt" placeholder="0"></div>
+      <div class="form-group"><label>Tanggal</label><input type="date" id="k-date"></div>
+    </div>
+    <div class="form-group">
+      <label>Kategori</label>
+      <select id="k-cat">
+        <option>Kebersihan</option><option>Keamanan</option><option>Taman</option>
+        <option>Perbaikan</option><option>Administrasi</option><option>Lainnya</option>
+      </select>
+    </div>
+    <button class="btn-primary" onclick="simpanKeluar()">Simpan</button>
+    <button class="btn-secondary" onclick="closeModal('modal-keluar')">Batal</button>
+  </div>
+</div>
+
+<!-- App -->
+<header class="header">
+  <div class="header-top">
+    <div>
+      <div class="header-title">🏠 Iuran Perumahan Cikundul Garden</div>
+      <div class="header-sub" id="header-sub">Memuat data...</div>
+    </div>
+  </div>
+  <div class="metric-row">
+    <div class="metric-card"><div class="metric-label">Total Kas</div><div class="metric-val" id="m-kas" style="color:var(--inc)">Rp 0</div></div>
+    <div class="metric-card"><div class="metric-label">Pengeluaran</div><div class="metric-val" id="m-exp" style="color:var(--exp)">Rp 0</div></div>
+    <div class="metric-card"><div class="metric-label">Saldo</div><div class="metric-val" id="m-saldo" style="color:var(--sav)">Rp 0</div></div>
+  </div>
+</header>
+
+<div class="month-bar">
+  <select id="sel-bulan" onchange="renderAll()"></select>
+</div>
+
+<nav class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('warga',this)">Warga</button>
+  <button class="tab-btn" onclick="switchTab('pengeluaran',this)">Pengeluaran</button>
+  <button class="tab-btn" onclick="switchTab('rekap',this)">Rekap</button>
+  <button class="tab-btn" onclick="switchTab('backup',this)">Backup</button>
+</nav>
+
+<section id="tab-warga" class="tab-section active">
+  <div id="warga-list"></div>
+</section>
+<section id="tab-pengeluaran" class="tab-section">
+  <div id="keluar-list"></div>
+</section>
+<section id="tab-rekap" class="tab-section">
+  <div id="rekap-content"></div>
+</section>
+<section id="tab-backup" class="tab-section">
+  <div style="background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.2);border-radius:var(--rs);padding:14px;margin-bottom:1.25rem;font-size:13px;color:var(--text2);line-height:1.6">
+    📄 Data tersimpan di <strong style="color:var(--text)">localStorage + IndexedDB</strong>. Tidak hilang meski clear cache.
+  </div>
+  <p class="section-label">Backup & Restore</p>
+  <div class="backup-card" onclick="exportData()">
+    <div class="backup-icon" style="background:rgba(52,211,153,0.15)">💾</div>
+    <div class="backup-text"><strong>Export backup</strong><span>Download file JSON ke HP</span></div>
+    <span style="color:var(--text2);font-size:18px">→</span>
+  </div>
+  <div class="backup-card" onclick="handleImport()">
+    <div class="backup-icon" style="background:rgba(96,165,250,0.15)">📂</div>
+    <div class="backup-text"><strong>Import dari file</strong><span>Pulihkan data dari file JSON</span></div>
+    <span style="color:var(--text2);font-size:18px">→</span>
+  </div>
+  <p class="section-label" style="margin-top:1.5rem">Tips</p>
+  <div class="tip-item">✅ Export rutin setiap bulan sebagai cadangan</div>
+  <div class="tip-item">✅ Simpan file backup di Google Drive / WhatsApp</div>
+  <div class="tip-item">⚠️ Clear Data (bukan Clear Cache) bisa hapus data</div>
+</section>
+
+<button class="fab show" id="fab" onclick="onFab()">+</button>
+<div class="toast" id="toast"></div>
+<input type="file" id="import-input" accept=".json" style="display:none" onchange="handleImportBrowser(event)">
+
+<script>
+const KEY = 'iuran_rt';
+let data = { warga:{}, bayar:{}, keluar:{} };
+let editWargaId = null;
+let pendingBayarId = null;
+let currentTab = 'warga';
+
+const BULAN   = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const BULANPJ = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const CATICON = {Kebersihan:'🧹',Keamanan:'🔒',Taman:'🌿',Perbaikan:'🔧',Administrasi:'📄',Lainnya:'📌'};
+const COLORS  = ['#34d399','#60a5fa','#fbbf24','#f87171','#a78bfa','#fb7185'];
+
+// ── Storage ───────────────────────────────────────────────────────────────
+function saveData(){ localStorage.setItem(KEY,JSON.stringify(data)); saveToIDB(data); }
+
+function loadData(){
+  const ls = localStorage.getItem(KEY);
+  if(ls){ data=JSON.parse(ls); saveToIDB(data); renderAll(); }
+  else {
+    loadFromIDB().then(d=>{
+      if(d){ data=d; localStorage.setItem(KEY,JSON.stringify(d)); toast('Data dipulihkan!'); }
+      renderAll();
+    });
+  }
+}
+
+function openIDB(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open('IuranRTDB',1);
+    r.onupgradeneeded=e=>e.target.result.createObjectStore('store');
+    r.onsuccess=e=>res(e.target.result); r.onerror=()=>rej();
+  });
+}
+async function saveToIDB(d){
+  try{ const db=await openIDB(); db.transaction('store','readwrite').objectStore('store').put(JSON.stringify(d),'data'); }catch(e){}
+}
+async function loadFromIDB(){
+  try{
+    const db=await openIDB();
+    return new Promise(res=>{
+      const r=db.transaction('store','readonly').objectStore('store').get('data');
+      r.onsuccess=e=>res(e.target.result?JSON.parse(e.target.result):null);
+      r.onerror=()=>res(null);
+    });
+  }catch(e){ return null; }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function fmt(n){ return 'Rp '+Math.abs(Math.round(n)).toLocaleString('id-ID'); }
+function fmtTgl(d){
+  if(!d) return '';
+  const dt=new Date(d);
+  return dt.getDate()+' '+BULAN[dt.getMonth()]+' '+dt.getFullYear();
+}
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
+function getBulan(){ return document.getElementById('sel-bulan').value||bulanNow(); }
+function bulanNow(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function bulanLabel(ym){ const[y,m]=ym.split('-'); return BULAN[+m-1]+' '+y; }
+function bulanLabelPj(ym){ const[y,m]=ym.split('-'); return BULANPJ[+m-1]+' '+y; }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function renderAll(){
+  updateBulanSelect(); updateMetrics();
+  renderWarga(); renderKeluar(); renderRekap();
+  const jml=Object.keys(data.warga).length;
+  document.getElementById('header-sub').textContent=jml+' warga · '+bulanLabel(getBulan());
+}
+
+function updateBulanSelect(){
+  const sel=document.getElementById('sel-bulan');
+  const cur=sel.value||bulanNow();
+  const opts=[];
+  const now=new Date();
+  for(let i=0;i<12;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const v=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    opts.push({v,l:bulanLabel(v)});
+  }
+  sel.innerHTML=opts.map(o=>`<option value="${o.v}"${o.v===cur?' selected':''}>${o.l}</option>`).join('');
+}
+
+function updateMetrics(){
+  let totalKas=0, totalKeluar=0;
+  Object.entries(data.warga).forEach(([id,w])=>{
+    Object.keys(data.bayar).forEach(ym=>{
+      if(data.bayar[ym]?.[id]) totalKas+=(w.iuran||0);
+    });
+  });
+  Object.values(data.keluar).forEach(k=>totalKeluar+=(k.amt||0));
+  const saldo=totalKas-totalKeluar;
+  document.getElementById('m-kas').textContent=fmt(totalKas);
+  document.getElementById('m-exp').textContent=fmt(totalKeluar);
+  const el=document.getElementById('m-saldo');
+  el.textContent=(saldo<0?'-':'')+fmt(saldo);
+  el.style.color=saldo>=0?'var(--sav)':'var(--exp)';
+}
+
+// ── Warga ─────────────────────────────────────────────────────────────────
+function renderWarga(){
+  const bulan=getBulan();
+  const bayarBulan=data.bayar[bulan]||{};
+  const list=Object.entries(data.warga).sort((a,b)=>(a[1].blok||'').localeCompare((b[1].blok||''),undefined,{numeric:true,sensitivity:'base'}));
+  const el=document.getElementById('warga-list');
+  if(!list.length){ el.innerHTML='<div class="empty"><span>👥</span>Belum ada warga.<br>Tap + untuk tambah.</div>'; return; }
+  el.innerHTML=list.map(([id,w])=>{
+    const rec=bayarBulan[id];
+    const lunas=!!rec;
+    const tgl=rec&&rec.tgl ? '<div class="tgl-bayar" style="color:var(--inc)">📅 Bayar: '+fmtTgl(rec.tgl)+(rec.catatan?' · '+rec.catatan:'')+'</div>' : '';
+    return `<div class="warga-item">
+      <div class="warga-blok">${w.blok}</div>
+      <div class="warga-info">
+        <div class="warga-name">${w.nama}</div>
+        <div class="warga-sub">${fmt(w.iuran||0)}/bln${w.hp?' · '+w.hp:''}</div>
+        ${tgl}
+      </div>
+      <button class="chip ${lunas?'chip-lunas':'chip-belum'}" onclick="${lunas?`batalLunas('${id}','${bulan}')`:`openModalBayar('${id}','${bulan}')`}">
+        ${lunas?'✓ Lunas':'Belum'}
+      </button>
+      <button class="btn-icon" onclick="openEditWarga('${id}')">✏️</button>
+    </div>`;
+  }).join('');
+}
+
+// ── Modal Tandai Bayar ────────────────────────────────────────────────────
+function openModalBayar(wargaId, bulan){
+  const w=data.warga[wargaId]; if(!w) return;
+  pendingBayarId={wargaId, bulan};
+  document.getElementById('mb-title').textContent='Tandai Lunas — '+w.nama;
+  document.getElementById('mb-sub').textContent=w.blok+' · '+bulanLabelPj(bulan)+' · '+fmt(w.iuran||0);
+  document.getElementById('b-tanggal').value=new Date().toISOString().slice(0,10);
+  document.getElementById('b-catatan').value='';
+  document.getElementById('modal-bayar').classList.add('show');
+}
+
+function konfirmasiLunas(){
+  if(!pendingBayarId) return;
+  const {wargaId, bulan}=pendingBayarId;
+  const tgl=document.getElementById('b-tanggal').value;
+  const catatan=document.getElementById('b-catatan').value.trim();
+  if(!tgl){ toast('Pilih tanggal bayar dulu'); return; }
+  if(!data.bayar[bulan]) data.bayar[bulan]={};
+  data.bayar[bulan][wargaId]={ tgl, catatan, dicatat: new Date().toISOString() };
+  saveData(); renderAll();
+  toast('✅ Lunas! Dicatat '+fmtTgl(tgl));
+  closeModal('modal-bayar');
+  pendingBayarId=null;
+}
+
+function batalLunas(wargaId, bulan){
+  if(!confirm('Batalkan status lunas warga ini?')) return;
+  delete data.bayar[bulan][wargaId];
+  saveData(); renderAll(); toast('Status dibatalkan');
+}
+
+// ── Warga CRUD ────────────────────────────────────────────────────────────
+function openAddWarga(){
+  editWargaId=null;
+  document.getElementById('mw-title').textContent='Tambah Warga';
+  ['w-nama','w-blok','w-hp'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('w-iuran').value='20000';
+  document.getElementById('btn-hapus-warga').style.display='none';
+  document.getElementById('modal-warga').classList.add('show');
+}
+function openEditWarga(id){
+  const w=data.warga[id]; if(!w) return;
+  editWargaId=id;
+  document.getElementById('mw-title').textContent='Edit Warga';
+  document.getElementById('w-nama').value=w.nama||'';
+  document.getElementById('w-blok').value=w.blok||'';
+  document.getElementById('w-hp').value=w.hp||'';
+  document.getElementById('w-iuran').value=w.iuran||'';
+  document.getElementById('btn-hapus-warga').style.display='';
+  document.getElementById('modal-warga').classList.add('show');
+}
+function simpanWarga(){
+  const nama=document.getElementById('w-nama').value.trim();
+  const blok=document.getElementById('w-blok').value.trim();
+  const hp=document.getElementById('w-hp').value.trim();
+  const iuran=parseFloat(document.getElementById('w-iuran').value)||0;
+  if(!nama||!blok){ toast('Nama dan blok wajib diisi'); return; }
+  const id=editWargaId||uid();
+  data.warga[id]={nama,blok,hp,iuran};
+  saveData(); renderAll();
+  toast(editWargaId?'Data diperbarui ✅':'Warga ditambahkan ✅');
+  closeModal('modal-warga');
+}
+function hapusWarga(){
+  if(!editWargaId||!confirm('Hapus warga ini?')) return;
+  delete data.warga[editWargaId];
+  Object.keys(data.bayar).forEach(ym=>{ if(data.bayar[ym]) delete data.bayar[ym][editWargaId]; });
+  saveData(); renderAll(); toast('Warga dihapus');
+  closeModal('modal-warga');
+}
+
+// ── Pengeluaran ───────────────────────────────────────────────────────────
+function renderKeluar(){
+  const bulan=getBulan();
+  const list=Object.entries(data.keluar)
+    .filter(([,k])=>k.date&&k.date.slice(0,7)===bulan)
+    .sort((a,b)=>b[1].date.localeCompare(a[1].date));
+  const el=document.getElementById('keluar-list');
+  if(!list.length){ el.innerHTML='<div class="empty"><span>📋</span>Belum ada pengeluaran<br>bulan ini.</div>'; return; }
+  el.innerHTML=list.map(([id,k])=>`
+    <div class="tx-item">
+      <div class="tx-icon">${CATICON[k.cat]||'📌'}</div>
+      <div class="tx-info">
+        <div class="tx-name">${k.desc||k.cat}</div>
+        <div class="tx-sub">${k.cat} · ${fmtTgl(k.date)}</div>
+      </div>
+      <div class="tx-amt">-${fmt(k.amt)}</div>
+      <button class="btn-icon" onclick="hapusKeluar('${id}')">✕</button>
+    </div>`).join('');
+}
+function openAddKeluar(){
+  document.getElementById('k-desc').value='';
+  document.getElementById('k-amt').value='';
+  document.getElementById('k-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('modal-keluar').classList.add('show');
+}
+function simpanKeluar(){
+  const desc=document.getElementById('k-desc').value.trim();
+  const amt=parseFloat(document.getElementById('k-amt').value);
+  const date=document.getElementById('k-date').value;
+  const cat=document.getElementById('k-cat').value;
+  if(!amt||amt<=0){ toast('Isi jumlah pengeluaran'); return; }
+  if(!date){ toast('Pilih tanggal'); return; }
+  data.keluar[uid()]={desc,amt,date,cat};
+  saveData(); renderAll(); toast('Pengeluaran dicatat ✅');
+  closeModal('modal-keluar');
+}
+function hapusKeluar(id){
+  if(!confirm('Hapus pengeluaran ini?')) return;
+  delete data.keluar[id]; saveData(); renderAll(); toast('Dihapus');
+}
+
+// ── Rekap ─────────────────────────────────────────────────────────────────
+function renderRekap(){
+  const bulan=getBulan();
+  const bayarBulan=data.bayar[bulan]||{};
+  const wargaList=Object.entries(data.warga);
+  const sudahBayar=wargaList.filter(([id])=>bayarBulan[id]);
+  const belumBayar=wargaList.filter(([id])=>!bayarBulan[id]);
+  const terkumpul=sudahBayar.reduce((s,[,w])=>s+(w.iuran||0),0);
+  const targetBulan=wargaList.reduce((s,[,w])=>s+(w.iuran||0),0);
+  const keluarBulan=Object.values(data.keluar).filter(k=>k.date&&k.date.slice(0,7)===bulan).reduce((s,k)=>s+(k.amt||0),0);
+
+  const catMap={};
+  Object.values(data.keluar).filter(k=>k.date&&k.date.slice(0,7)===bulan).forEach(k=>{catMap[k.cat]=(catMap[k.cat]||0)+k.amt;});
+  const catList=Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+  const maxCat=catList[0]?.[1]||1;
+
+  document.getElementById('rekap-content').innerHTML=`
+    <div class="rekap-card">
+      <div class="rekap-title">📊 Iuran — ${bulanLabelPj(bulan)}</div>
+      <div class="rekap-row"><span>Total warga</span><span>${wargaList.length} orang</span></div>
+      <div class="rekap-row"><span style="color:var(--inc)">✓ Sudah bayar</span><span style="color:var(--inc)">${sudahBayar.length} orang</span></div>
+      <div class="rekap-row"><span style="color:var(--exp)">✗ Belum bayar</span><span style="color:var(--exp)">${belumBayar.length} orang</span></div>
+      <div class="rekap-row"><span>Target</span><span>${fmt(targetBulan)}</span></div>
+      <div class="rekap-row"><span>Terkumpul</span><span style="color:var(--inc)">${fmt(terkumpul)}</span></div>
+      <div class="rekap-row"><span>Pengeluaran</span><span style="color:var(--exp)">-${fmt(keluarBulan)}</span></div>
+      <div class="rekap-row"><span>Saldo bulan ini</span><span style="color:var(--sav)">${fmt(terkumpul-keluarBulan)}</span></div>
+    </div>
+
+    <div class="rekap-card">
+      <div class="rekap-title">✅ Sudah bayar</div>
+      ${sudahBayar.length ? sudahBayar.map(([id,w])=>{
+        const rec=bayarBulan[id];
+        return `<div class="rekap-row">
+          <div>
+            <div>${w.blok} · ${w.nama}</div>
+            <div class="rekap-tgl">📅 ${fmtTgl(rec.tgl)}${rec.catatan?' · '+rec.catatan:''}</div>
+          </div>
+          <span style="color:var(--inc)">${fmt(w.iuran||0)}</span>
+        </div>`;
+      }).join('') : '<div style="font-size:13px;color:var(--text2);padding:6px 0">Belum ada yang bayar.</div>'}
+    </div>
+
+    <div class="rekap-card">
+      <div class="rekap-title">⏳ Belum bayar</div>
+      ${belumBayar.length ? belumBayar.map(([,w])=>`
+        <div class="rekap-row">
+          <span>${w.blok} · ${w.nama}</span>
+          <span style="color:var(--exp)">${fmt(w.iuran||0)}</span>
+        </div>`).join('')
+        : '<div style="font-size:13px;color:var(--inc);padding:6px 0">Semua warga sudah lunas! 🎉</div>'}
+    </div>
+
+    ${catList.length?`<div class="rekap-card">
+      <div class="rekap-title">💸 Pengeluaran per kategori</div>
+      ${catList.map(([cat,amt],i)=>`
+        <div class="bar-wrap">
+          <div class="bar-meta"><span>${CATICON[cat]||'📌'} ${cat}</span><span>${fmt(amt)}</span></div>
+          <div class="bar-bg"><div class="bar-fill" style="width:${Math.round(amt/maxCat*100)}%;background:${COLORS[i%COLORS.length]}"></div></div>
+        </div>`).join('')}
+    </div>`:''}`;
+}
+
+// ── Backup ────────────────────────────────────────────────────────────────
+/*function exportData(){
+  const blob=new Blob([JSON.stringify({version:2,exported:new Date().toISOString(),data},null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  //a.href=url; a.download=`iuran-perumahan-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.json`;
+  a.href=url; a.download=`iuran-perumahan-${new Date().toLocaleString('sv-SE').replace(/[\s:]/g,'-')}.json`;
+  a.click(); URL.revokeObjectURL(url); toast('Backup diunduh! 💾');
+}
+function handleImport(e){
+  const file=e.target.files[0]; if(!file) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const parsed=JSON.parse(ev.target.result);
+      const imported=parsed.data||parsed;
+      if(!imported.warga) throw new Error();
+      if(!confirm('Import data? Data saat ini akan diganti.')) return;
+      data=imported; saveData(); renderAll(); toast('Data berhasil diimport ✅');
+    }catch(err){ alert('File tidak valid.'); }
+  };
+  r.readAsText(file); e.target.value='';
+}*/
+
+// ── Export ────────────────────────────────────────────────────────────────
+async function exportData() {
+  const json = JSON.stringify({ version:2, exported: new Date().toISOString(), data }, null, 2);
+  const fileName = `iuran-perumahan-${new Date().toISOString().slice(0,10)}.json`;
+
+  if (window.Capacitor?.isNativePlatform?.()) {
+    try {
+      const { Filesystem } = window.Capacitor.Plugins;
+
+      try {
+        await Filesystem.mkdir({
+          path: 'IuranPerumahan',
+          directory: 'DOCUMENTS',
+          recursive: true
+        });
+      } catch(e) {} // folder sudah ada
+
+      await Filesystem.writeFile({
+        path: `IuranPerumahan/${fileName}`,
+        directory: 'DOCUMENTS',
+        data: json,
+        encoding: 'utf8'
+      });
+
+      toast('Tersimpan di Documents/IuranPerumahan/ 💾');
+    } catch (err) {
+      toast('Gagal simpan: ' + err.message);
+    }
+
+  } else {
+    const blob = new Blob([json], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Backup diunduh! 💾');
+  }
+}
+
+// ── Import ────────────────────────────────────────────────────────────────
+async function handleImport() {
+  if (window.Capacitor?.isNativePlatform?.()) {
+    try {
+      const { Filesystem } = window.Capacitor.Plugins;
+
+      // Baca daftar file di folder IuranPerumahan
+      const result = await Filesystem.readdir({
+        path: 'IuranPerumahan',
+        directory: 'DOCUMENTS'
+      });
+
+      const jsonFiles = result.files
+        .filter(f => (f.name || f).endsWith('.json'))
+        .map(f => f.name || f)
+        .sort()
+        .reverse();
+
+      if (!jsonFiles.length) {
+        toast('Tidak ada file backup di Documents/IuranPerumahan/');
+        return;
+      }
+
+      // Tampilkan pilihan file
+      const pilihan = await showFilePicker(jsonFiles);
+      if (!pilihan) return;
+
+      // Baca file yang dipilih
+      const fileData = await Filesystem.readFile({
+        path: `IuranPerumahan/${pilihan}`,
+        directory: 'DOCUMENTS',
+        encoding: 'utf8'
+      });
+
+      const parsed   = JSON.parse(fileData.data);
+      const imported = parsed.data || parsed;
+      if (!imported.warga) throw new Error('Format tidak valid');
+      if (!confirm(`Import data dari ${pilihan}?\nData saat ini akan diganti.`)) return;
+
+      data = imported;
+      saveData();
+      renderAll();
+      toast('Data berhasil diimport ✅');
+
+    } catch (err) {
+      toast('Gagal import: ' + err.message);
+    }
+
+  } else {
+    // Di browser — pakai file input biasa
+    document.getElementById('import-input').click();
+  }
+}
+
+// Handle import dari browser (file input)
+function handleImportBrowser(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      const parsed   = JSON.parse(ev.target.result);
+      const imported = parsed.data || parsed;
+      if (!imported.warga) throw new Error();
+      if (!confirm('Import data? Data saat ini akan diganti.')) return;
+      data = imported;
+      saveData();
+      renderAll();
+      toast('Data berhasil diimport ✅');
+    } catch(err) {
+      alert('File tidak valid.');
+    }
+  };
+  r.readAsText(file);
+  e.target.value = '';
+}
+
+// Modal pilih file backup
+function showFilePicker(files) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#1e293b;border-radius:12px 12px 0 0;padding:1.25rem;width:100%;max-width:520px;max-height:60vh;overflow-y:auto';
+    box.innerHTML = `
+      <div style="font-size:16px;font-weight:700;margin-bottom:4px">Pilih file backup</div>
+      <div style="font-size:13px;color:#94a3b8;margin-bottom:1rem">Documents/IuranPerumahan/</div>
+      ${files.map(f => `
+        <div class="file-item" data-file="${f}"
+          style="padding:12px;background:#334155;border-radius:8px;margin-bottom:8px;cursor:pointer;font-size:13px">
+          📄 ${f}
+        </div>`).join('')}
+      <button style="width:100%;padding:10px;background:none;border:1px solid #334155;border-radius:8px;color:#94a3b8;font-size:13px;cursor:pointer;margin-top:4px">
+        Batal
+      </button>
+    `;
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    box.querySelectorAll('.file-item').forEach(el => {
+      el.addEventListener('click', () => {
+        document.body.removeChild(overlay);
+        resolve(el.dataset.file);
+      });
+    });
+
+    box.querySelector('button').addEventListener('click', () => {
+      document.body.removeChild(overlay);
+      resolve(null);
+    });
+
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) {
+        document.body.removeChild(overlay);
+        resolve(null);
+      }
+    });
+  });
+}
+
+
+// ── Tab & FAB ─────────────────────────────────────────────────────────────
+function switchTab(name,el){
+  currentTab=name;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(el) el.classList.add('active');
+  document.getElementById('fab').classList.toggle('show',['warga','pengeluaran'].includes(name));
+}
+function onFab(){
+  if(currentTab==='warga') openAddWarga();
+  else if(currentTab==='pengeluaran') openAddKeluar();
+}
+
+document.querySelectorAll('.modal-overlay').forEach(el=>{
+  el.addEventListener('click',e=>{ if(e.target===el) el.classList.remove('show'); });
+});
+
+loadData();
+</script>
+<script src="saldo-berjalan-patch.js"></script>
+</body>
+</html>
